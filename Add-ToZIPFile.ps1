@@ -18,18 +18,24 @@ function Add-FileToZipAtPath {
         [string]$zipFileName,
         [string]$newFileToAdd
     )
-
+    $zip 
     try {
+        $fileName = ([io.path]::Combine($pathInZip, [System.IO.Path]::GetFileName($newFileToAdd) ) | Out-String).Trim()
+        $newFileToAddString = ($newFileToAdd | Out-String).Trim()
+        Write-Host "Adding File $newFileToAddString to $zipFileName at location $fileName"
+
         [Reflection.Assembly]::LoadWithPartialName('System.IO.Compression.FileSystem') | Out-Null
         $zip = [System.IO.Compression.ZipFile]::Open($zipFileName, "Update")
-        $fileName = Join-Path $pathInZip [System.IO.Path]::GetFileName($newFileToAdd)
-        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $newFileToAdd, $fileName, "Optimal") | Out-Null
-        $Zip.Dispose()
-        Write-Host "Successfully added $newFileToAdd to $zipFileName "
+        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $newFileToAddString, $fileName) | Out-Host
+        Write-Host "Successfully added $newFileToAdd to $zipFileName at location $fileName"
     }
     catch {
         Write-Warning "Failed to add $newFileToAdd to $zipFileName . Details : $_"
-
+    }
+    finally {
+        if ($null -ne $zip) {
+            $zip.Dispose()
+        }
     }
     
 }
@@ -38,7 +44,7 @@ ResolveFilePattern($zipFileNamePattern) | ForEach-Object {
     $zipFileName = $_
     ResolveFilePattern($newFileToAddPattern) | ForEach-Object {
         $newFileName = $_
-        Add-FileToZipAtPath -zipFileName $zipFileName -newFileToAdd $newFileName
         Write-Host "Found $zipFileName and $newFileName in path $pathInZip"
+        Add-FileToZipAtPath -zipFileName $zipFileName -newFileToAdd $newFileName
     }
 }
